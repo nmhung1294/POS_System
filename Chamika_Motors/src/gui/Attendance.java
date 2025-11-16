@@ -5,13 +5,17 @@
 package gui;
 
 // import com.formdev.flatlaf.FlatDarculaLaf;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Vector;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import model.MySQL;
+import util.DBUtil;
 
 /**
  *
@@ -36,18 +40,22 @@ public class Attendance extends javax.swing.JFrame {
 
     private void loadEmployee() {
         try {
-            ResultSet resultSet = MySQL.execute("SELECT * FROM `employee`");
+            String sql = "SELECT * FROM `employee`";
+            try (Connection conn = DBUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql);
+                 ResultSet resultSet = ps.executeQuery()) {
 
-            DefaultTableModel model = (DefaultTableModel) jTable2.getModel();
-            model.setRowCount(0);
+                DefaultTableModel model = (DefaultTableModel) jTable2.getModel();
+                model.setRowCount(0);
 
-            while (resultSet.next()) {
+                while (resultSet.next()) {
 
-                Vector<String> vector = new Vector<>();
-                vector.add(resultSet.getString("mobile"));
-                vector.add(resultSet.getString("first_name") + " " + resultSet.getString("last_name"));
+                    Vector<String> vector = new Vector<>();
+                    vector.add(resultSet.getString("mobile"));
+                    vector.add(resultSet.getString("first_name") + " " + resultSet.getString("last_name"));
 
-                model.addRow(vector);
+                    model.addRow(vector);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -56,21 +64,28 @@ public class Attendance extends javax.swing.JFrame {
 
     private void loadAttendance(String mobile) {
         try {
-            ResultSet resultSet = MySQL.execute("SELECT * FROM `attendance` INNER JOIN `attend_type` ON "
-                    + "`attendance`.`attend_type_id`=`attend_type`.`id` WHERE `employee_mobile`='" + mobile + "' "
-                    + "ORDER BY `attend_date` DESC");
+            String sql = "SELECT * FROM `attendance` INNER JOIN `attend_type` ON "
+                    + "`attendance`.`attend_type_id`=`attend_type`.`id` WHERE `employee_mobile`=? "
+                    + "ORDER BY `attend_date` DESC";
+            try (Connection conn = DBUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
-            model.setRowCount(0);
+                ps.setString(1, mobile);
 
-            while (resultSet.next()) {
+                try (ResultSet resultSet = ps.executeQuery()) {
+                    DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
+                    model.setRowCount(0);
 
-                Vector<String> vector = new Vector<>();
-                vector.add(resultSet.getString("id"));
-                vector.add(resultSet.getString("attend_date"));
-                vector.add(resultSet.getString("attend_type.name"));
+                    while (resultSet.next()) {
 
-                model.addRow(vector);
+                        Vector<String> vector = new Vector<>();
+                        vector.add(resultSet.getString("id"));
+                        vector.add(resultSet.getString("attend_date"));
+                        vector.add(resultSet.getString("attend_type.name"));
+
+                        model.addRow(vector);
+                    }
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -249,16 +264,30 @@ public class Attendance extends javax.swing.JFrame {
                     type_id = "3";
                 }
 
-                ResultSet resultSet = MySQL.execute("SELECT * FROM `attendance` WHERE `employee_mobile`='" + mobile + "' "
-                        + "AND `attend_date`='" + date + "'");
+                String checkSql = "SELECT * FROM `attendance` WHERE `employee_mobile`=? AND `attend_date`=?";
+                try (Connection conn = DBUtil.getConnection();
+                     PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
 
-                if (resultSet.next()) {
-                    JOptionPane.showMessageDialog(this, "Allready Marked!", "Warning", JOptionPane.WARNING_MESSAGE);
-                } else {
-                    MySQL.execute("INSERT INTO `attendance`(`employee_mobile`,`attend_date`,`attend_type_id`) "
-                            + "VALUES('" + mobile + "','" + date + "','" + type_id + "')");
+                    checkPs.setString(1, mobile);
+                    checkPs.setString(2, date);
 
-                    JOptionPane.showMessageDialog(this, "Succesfully marked!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    try (ResultSet resultSet = checkPs.executeQuery()) {
+                        if (resultSet.next()) {
+                            JOptionPane.showMessageDialog(this, "Allready Marked!", "Warning", JOptionPane.WARNING_MESSAGE);
+                        } else {
+                            String insertSql = "INSERT INTO `attendance`(`employee_mobile`,`attend_date`,`attend_type_id`) VALUES(?,?,?)";
+                            try (PreparedStatement insertPs = conn.prepareStatement(insertSql)) {
+                                insertPs.setString(1, mobile);
+                                insertPs.setString(2, date);
+                                insertPs.setString(3, type_id);
+                                insertPs.executeUpdate();
+
+                                JOptionPane.showMessageDialog(this, "Succesfully marked!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                            }
+                        }
+                    }
+                } catch (SQLException sqlEx) {
+                    sqlEx.printStackTrace();
                 }
 
                 loadAttendance(mobile);

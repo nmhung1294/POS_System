@@ -18,114 +18,89 @@ public class StockRepositoryImpl implements StockRepository {
     @Override
     public Optional<String> findStockId(String productId, BigDecimal sellingPrice, LocalDate mfg, LocalDate exp) throws Exception {
         String sql = "SELECT id FROM stock WHERE product_id = ? AND selling_price = ? AND mfg = ? AND exp = ?";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            conn = DBUtil.getConnection();
-            ps = conn.prepareStatement(sql);
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, productId);
             ps.setBigDecimal(2, sellingPrice);
             ps.setDate(3, Date.valueOf(mfg));
             ps.setDate(4, Date.valueOf(exp));
-            rs = ps.executeQuery();
-            if (rs.next()) {
-                return Optional.of(rs.getString("id"));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(rs.getString("id"));
+                }
+                return Optional.empty();
             }
-            return Optional.empty();
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Error finding stock", e);
             throw new Exception("Failed to find stock", e);
-        } finally {
-            DBUtil.closeQuietly(rs, ps, conn);
         }
     }
 
     @Override
     public double getStockQuantity(String stockId) throws Exception {
         String sql = "SELECT qty FROM stock WHERE id = ?";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try {
-            conn = DBUtil.getConnection();
-            ps = conn.prepareStatement(sql);
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, stockId);
-            rs = ps.executeQuery();
-            if (rs.next()) {
-                return rs.getDouble("qty");
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble("qty");
+                }
+                return 0.0;
             }
-            return 0.0;
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Error getting stock quantity", e);
             throw new Exception("Failed to get stock quantity", e);
-        } finally {
-            DBUtil.closeQuietly(rs, ps, conn);
         }
     }
 
     @Override
     public void updateStockQuantity(String stockId, double newQuantity) throws Exception {
         String sql = "UPDATE stock SET qty = ? WHERE id = ?";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        try {
-            conn = DBUtil.getConnection();
-            ps = conn.prepareStatement(sql);
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setDouble(1, newQuantity);
             ps.setString(2, stockId);
             ps.executeUpdate();
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Error updating stock quantity", e);
             throw new Exception("Failed to update stock quantity", e);
-        } finally {
-            DBUtil.closeQuietly(null, ps, conn);
         }
     }
 
     @Override
-    public String createStock(String productId, double quantity, BigDecimal sellingPrice, 
+    public String createStock(String productId, double quantity, BigDecimal sellingPrice,
                              LocalDate mfg, LocalDate exp) throws Exception {
         String sql = "INSERT INTO stock (product_id, qty, selling_price, mfg, exp) VALUES (?, ?, ?, ?, ?)";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        try {
-            conn = DBUtil.getConnection();
-            ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, productId);
             ps.setDouble(2, quantity);
             ps.setBigDecimal(3, sellingPrice);
             ps.setDate(4, Date.valueOf(mfg));
             ps.setDate(5, Date.valueOf(exp));
             ps.executeUpdate();
-            
+
             // Get generated stock ID
             Optional<String> stockId = findStockId(productId, sellingPrice, mfg, exp);
             return stockId.orElseThrow(() -> new Exception("Failed to retrieve created stock ID"));
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Error creating stock", e);
             throw new Exception("Failed to create stock", e);
-        } finally {
-            DBUtil.closeQuietly(null, ps, conn);
         }
     }
 
     @Override
     public void decreaseStockQuantity(String stockId, double quantity) throws Exception {
         String sql = "UPDATE stock SET qty = qty - ? WHERE id = ?";
-        Connection conn = null;
-        PreparedStatement ps = null;
-        try {
-            conn = DBUtil.getConnection();
-            ps = conn.prepareStatement(sql);
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setDouble(1, quantity);
             ps.setString(2, stockId);
             ps.executeUpdate();
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Error decreasing stock quantity", e);
             throw new Exception("Failed to decrease stock quantity", e);
-        } finally {
-            DBUtil.closeQuietly(null, ps, conn);
         }
     }
 }

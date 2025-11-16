@@ -5,7 +5,10 @@
 package gui;
 
 // import com.formdev.flatlaf.FlatDarculaLaf;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -15,6 +18,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 import model.MySQL;
+import util.DBUtil;
 
 /**
  *
@@ -59,18 +63,22 @@ public class Stock extends javax.swing.JFrame {
 
     private void loadBrand() {
         try {
-            ResultSet resultSet = MySQL.execute("SELECT * FROM `brand`");
+            String sql = "SELECT * FROM `brand`";
+            try (Connection conn = DBUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql);
+                 ResultSet resultSet = ps.executeQuery()) {
 
-            Vector<String> vector = new Vector<>();
-            vector.add("Select");
+                Vector<String> vector = new Vector<>();
+                vector.add("Select");
 
-            while (resultSet.next()) {
-                vector.add(resultSet.getString("name"));
-                brandMap.put(resultSet.getString("name"), resultSet.getString("id"));
+                while (resultSet.next()) {
+                    vector.add(resultSet.getString("name"));
+                    brandMap.put(resultSet.getString("name"), resultSet.getString("id"));
 
+                }
+                DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>(vector);
+                jComboBox1.setModel(model);
             }
-            DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>(vector);
-            jComboBox1.setModel(model);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -79,18 +87,22 @@ public class Stock extends javax.swing.JFrame {
 
     private void loadProductType() {
         try {
-            ResultSet resultSet = MySQL.execute("SELECT * FROM `product_type`");
+            String sql = "SELECT * FROM `product_type`";
+            try (Connection conn = DBUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql);
+                 ResultSet resultSet = ps.executeQuery()) {
 
-            Vector<String> vector = new Vector<>();
-            vector.add("Select");
+                Vector<String> vector = new Vector<>();
+                vector.add("Select");
 
-            while (resultSet.next()) {
-                vector.add(resultSet.getString("name"));
-                productTypeMap.put(resultSet.getString("name"), resultSet.getString("id"));
+                while (resultSet.next()) {
+                    vector.add(resultSet.getString("name"));
+                    productTypeMap.put(resultSet.getString("name"), resultSet.getString("id"));
 
+                }
+                DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>(vector);
+                jComboBox3.setModel(model);
             }
-            DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>(vector);
-            jComboBox3.setModel(model);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -101,25 +113,32 @@ public class Stock extends javax.swing.JFrame {
 
         String search = jTextField6.getText();
         try {
-
-            ResultSet resultSet = MySQL.execute("SELECT * FROM `product` INNER JOIN `brand` ON "
+            String sql = "SELECT * FROM `product` INNER JOIN `brand` ON "
                     + "`product`.`brand_id`=`brand`.`id` INNER JOIN `product_type` ON `product`.`product_type_id`=`product_type`.`id` "
-                    + "INNER JOIN `stock_place` ON `product`.`stock_place_id`=`stock_place`.`id` WHERE `product`.`name`LIKE'%"+search+"%'");
-            
-            DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
-            model.setRowCount(0);
-            
-            while (resultSet.next()) {
-                Vector<String> vector = new Vector<>();
-                vector.add(resultSet.getString("id"));
-                vector.add(resultSet.getString("product_type.name"));
-                vector.add(resultSet.getString("brand.name"));
-                vector.add(resultSet.getString("product.name"));
-                vector.add(resultSet.getString("stock_place.name"));
-                model.addRow(vector);
+                    + "INNER JOIN `stock_place` ON `product`.`stock_place_id`=`stock_place`.`id` WHERE `product`.`name` LIKE ?";
+
+            try (Connection conn = DBUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+
+                ps.setString(1, "%" + search + "%");
+
+                try (ResultSet resultSet = ps.executeQuery()) {
+                    DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
+                    model.setRowCount(0);
+
+                    while (resultSet.next()) {
+                        Vector<String> vector = new Vector<>();
+                        vector.add(resultSet.getString("id"));
+                        vector.add(resultSet.getString("product_type.name"));
+                        vector.add(resultSet.getString("brand.name"));
+                        vector.add(resultSet.getString("product.name"));
+                        vector.add(resultSet.getString("stock_place.name"));
+                        model.addRow(vector);
+                    }
+                }
             }
 
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -531,15 +550,26 @@ public class Stock extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Please add brand name", "Warning", JOptionPane.WARNING_MESSAGE);
         } else {
             try {
-                ResultSet resultSet = MySQL.execute("SELECT * FROM `brand` WHERE `name`='" + brand + "'");
+                String checkSql = "SELECT * FROM `brand` WHERE `name`=?";
+                try (Connection conn = DBUtil.getConnection();
+                     PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
 
-                if (resultSet.next()) {
-                    JOptionPane.showMessageDialog(this, "Brand already added", "Warning", JOptionPane.WARNING_MESSAGE);
-                    jTextField2.setText("");
-                } else {
-                    MySQL.execute("INSERT INTO `brand`(`name`) VALUES('" + brand + "')");
-                    loadBrand();
-                    jTextField2.setText("");
+                    checkPs.setString(1, brand);
+
+                    try (ResultSet resultSet = checkPs.executeQuery()) {
+                        if (resultSet.next()) {
+                            JOptionPane.showMessageDialog(this, "Brand already added", "Warning", JOptionPane.WARNING_MESSAGE);
+                            jTextField2.setText("");
+                        } else {
+                            String insertSql = "INSERT INTO `brand`(`name`) VALUES(?)";
+                            try (PreparedStatement insertPs = conn.prepareStatement(insertSql)) {
+                                insertPs.setString(1, brand);
+                                insertPs.executeUpdate();
+                                loadBrand();
+                                jTextField2.setText("");
+                            }
+                        }
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -555,15 +585,26 @@ public class Stock extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Please add product type", "Warning", JOptionPane.WARNING_MESSAGE);
         } else {
             try {
-                ResultSet resultSet = MySQL.execute("SELECT * FROM `product_type` WHERE `name`='" + type + "'");
+                String checkSql = "SELECT * FROM `product_type` WHERE `name`=?";
+                try (Connection conn = DBUtil.getConnection();
+                     PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
 
-                if (resultSet.next()) {
-                    JOptionPane.showMessageDialog(this, "Product Type already added", "Warning", JOptionPane.WARNING_MESSAGE);
-                    jTextField5.setText("");
-                } else {
-                    MySQL.execute("INSERT INTO `product_type`(`name`) VALUES('" + type + "')");
-                    loadProductType();
-                    jTextField5.setText("");
+                    checkPs.setString(1, type);
+
+                    try (ResultSet resultSet = checkPs.executeQuery()) {
+                        if (resultSet.next()) {
+                            JOptionPane.showMessageDialog(this, "Product Type already added", "Warning", JOptionPane.WARNING_MESSAGE);
+                            jTextField5.setText("");
+                        } else {
+                            String insertSql = "INSERT INTO `product_type`(`name`) VALUES(?)";
+                            try (PreparedStatement insertPs = conn.prepareStatement(insertSql)) {
+                                insertPs.setString(1, type);
+                                insertPs.executeUpdate();
+                                loadProductType();
+                                jTextField5.setText("");
+                            }
+                        }
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -592,15 +633,31 @@ public class Stock extends javax.swing.JFrame {
         } else {
 
             try {
+                String checkSql = "SELECT * FROM `product` WHERE `id`=? OR (`name`=? AND `brand_id`=? AND `product_type_id`=?)";
+                try (Connection conn = DBUtil.getConnection();
+                     PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
 
-                ResultSet resultSet = MySQL.execute("SELECT * FROM `product` WHERE `id`='" + id + "' OR (`name`='" + name + "' AND `brand_id`='" + brandMap.get(brand) + "' AND `product_type_id`='" + productTypeMap.get(type) + "')");
+                    checkPs.setString(1, id);
+                    checkPs.setString(2, name);
+                    checkPs.setString(3, brandMap.get(brand));
+                    checkPs.setString(4, productTypeMap.get(type));
 
-                if (resultSet.next()) {
-                    JOptionPane.showMessageDialog(this, "Product already added", "Warning", JOptionPane.WARNING_MESSAGE);
-                } else {
-                    MySQL.execute("INSERT INTO `product` VALUES('" + id + "','" + brandMap.get(brand) + "','" + name + "',"
-                            + "'" + productTypeMap.get(type) + "','" + store + "')");
-                    JOptionPane.showMessageDialog(this, "Product added successfully - " + name, "Success", JOptionPane.INFORMATION_MESSAGE);
+                    try (ResultSet resultSet = checkPs.executeQuery()) {
+                        if (resultSet.next()) {
+                            JOptionPane.showMessageDialog(this, "Product already added", "Warning", JOptionPane.WARNING_MESSAGE);
+                        } else {
+                            String insertSql = "INSERT INTO `product` VALUES(?,?,?,?,?)";
+                            try (PreparedStatement insertPs = conn.prepareStatement(insertSql)) {
+                                insertPs.setString(1, id);
+                                insertPs.setString(2, brandMap.get(brand));
+                                insertPs.setString(3, name);
+                                insertPs.setString(4, productTypeMap.get(type));
+                                insertPs.setString(5, store);
+                                insertPs.executeUpdate();
+                                JOptionPane.showMessageDialog(this, "Product added successfully - " + name, "Success", JOptionPane.INFORMATION_MESSAGE);
+                            }
+                        }
+                    }
                 }
                 loadProducts();
                 resetProductUI();
@@ -635,23 +692,36 @@ public class Stock extends javax.swing.JFrame {
 
             try {
                 int row = jTable1.getSelectedRow();
-                
+
                 if(row==-1){
                     JOptionPane.showMessageDialog(this, "Please select a row", "Success", JOptionPane.INFORMATION_MESSAGE);
                 }else{
-                ResultSet resultSet = MySQL.execute("SELECT * FROM `product` WHERE `id`='" + id + "'");
+                    String checkSql = "SELECT * FROM `product` WHERE `id`=?";
+                    try (Connection conn = DBUtil.getConnection();
+                         PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
 
-                if (resultSet.next()) {
-                    MySQL.execute("UPDATE `product` SET `brand_id`='" + brandMap.get(brand) + "',`name`='" + name + "',"
-                            + "`product_type_id`='" + productTypeMap.get(type) + "',`stock_place_id`='" + store + "' "
-                                    + "WHERE `id`='"+id+"'");
-                    JOptionPane.showMessageDialog(this, "Product updated successfully - " + name, "Success", JOptionPane.INFORMATION_MESSAGE);
-                    
-                } else {
-                    JOptionPane.showMessageDialog(this, "No product in given details", "Warning", JOptionPane.WARNING_MESSAGE);
-                }
-                loadProducts();
-                resetProductUI();
+                        checkPs.setString(1, id);
+
+                        try (ResultSet resultSet = checkPs.executeQuery()) {
+                            if (resultSet.next()) {
+                                String updateSql = "UPDATE `product` SET `brand_id`=?,`name`=?,`product_type_id`=?,`stock_place_id`=? WHERE `id`=?";
+                                try (PreparedStatement updatePs = conn.prepareStatement(updateSql)) {
+                                    updatePs.setString(1, brandMap.get(brand));
+                                    updatePs.setString(2, name);
+                                    updatePs.setString(3, productTypeMap.get(type));
+                                    updatePs.setString(4, store);
+                                    updatePs.setString(5, id);
+                                    updatePs.executeUpdate();
+                                    JOptionPane.showMessageDialog(this, "Product updated successfully - " + name, "Success", JOptionPane.INFORMATION_MESSAGE);
+                                }
+
+                            } else {
+                                JOptionPane.showMessageDialog(this, "No product in given details", "Warning", JOptionPane.WARNING_MESSAGE);
+                            }
+                        }
+                    }
+                    loadProducts();
+                    resetProductUI();
                 }
 
             } catch (Exception e) {
@@ -672,10 +742,17 @@ public class Stock extends javax.swing.JFrame {
         int row = jTable1.getSelectedRow();
 
         try {
-            ResultSet resultSet = MySQL.execute("SELECT * FROM `stock_place` WHERE `name`='"+String.valueOf(jTable1.getValueAt(row, 4))+"'");
-            
-            if(resultSet.next()){
-                jTextField4.setText(resultSet.getString("id"));
+            String sql = "SELECT * FROM `stock_place` WHERE `name`=?";
+            try (Connection conn = DBUtil.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+
+                ps.setString(1, String.valueOf(jTable1.getValueAt(row, 4)));
+
+                try (ResultSet resultSet = ps.executeQuery()) {
+                    if(resultSet.next()){
+                        jTextField4.setText(resultSet.getString("id"));
+                    }
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

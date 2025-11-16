@@ -2,12 +2,16 @@ package gui;
 
 // import com.formdev.flatlaf.FlatDarculaLaf;
 import java.awt.Image;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashMap;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
 import model.MySQL;
+import util.DBUtil;
 
 /**
  *
@@ -191,21 +195,32 @@ public class SignIn extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(this, "Please Enter Your Password", "Warning", JOptionPane.WARNING_MESSAGE);
             } else {
 
-                ResultSet resultSet = MySQL.execute("SELECT * FROM `employee` WHERE `mobile`='" + mobile + "' AND `password`='" + password + "'");
+                String sql = "SELECT * FROM `employee` WHERE `mobile`=? AND `password`=?";
+                try (Connection conn = DBUtil.getConnection();
+                     PreparedStatement ps = conn.prepareStatement(sql)) {
 
-                if (resultSet.next()) {
+                    ps.setString(1, mobile);
+                    ps.setString(2, password);
 
-                    String fname = resultSet.getString("first_name");
-                    String lname = resultSet.getString("last_name");
-                    Integer type = resultSet.getInt("employee_type_id");
+                    try (ResultSet resultSet = ps.executeQuery()) {
+                        if (resultSet.next()) {
 
-                    Home home = new Home(fname+" "+lname,type);
-                    home.setVisible(true);
-                    setEmployeeMobile(mobile);
-                    setEmployeeName(fname + " " + lname);
-                    this.dispose();
-                } else {
-                    JOptionPane.showMessageDialog(this, "Invalid Mobile or Password", "Warning", JOptionPane.WARNING_MESSAGE);
+                            String fname = resultSet.getString("first_name");
+                            String lname = resultSet.getString("last_name");
+                            Integer type = resultSet.getInt("employee_type_id");
+
+                            Home home = new Home(fname+" "+lname,type);
+                            home.setVisible(true);
+                            setEmployeeMobile(mobile);
+                            setEmployeeName(fname + " " + lname);
+                            this.dispose();
+                        } else {
+                            JOptionPane.showMessageDialog(this, "Invalid Mobile or Password", "Warning", JOptionPane.WARNING_MESSAGE);
+                        }
+                    }
+                } catch (SQLException sqlEx) {
+                    sqlEx.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "Database error occurred", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         } catch (Exception e) {
