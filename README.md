@@ -104,7 +104,7 @@ Co So Du Lieu (MySQL)
 
 ---
 
-## Lo Troinh Phat Trien
+## Lo Trinh Phat Trien
 
 - V1 (Hoan Thanh): Kien truc phan tang, kiem thu don vi, CI co ban
 - **V1.1 (Hien Tai)**: Bao mat SQL Injection, toi uu query, quan ly tai nguyen
@@ -115,7 +115,7 @@ Co So Du Lieu (MySQL)
 
 ---
 
-## ✨ **Cập Nhật Mới Nhất - Version 1.1.0 (2025-11-16)**
+## **Cập Nhật Mới Nhất - Version 2.0 **
 
 ### **Cải Thiện Bảo Mật**
 - **Loại Bỏ Hoàn Toàn SQL Injection:** Chuyển đổi 18 truy vấn SQL từ string concatenation (dễ bị tấn công) sang PreparedStatement (an toàn)
@@ -137,9 +137,9 @@ Co So Du Lieu (MySQL)
   - Cải thiện throughput trong concurrent environments
 
 ### **Metrics Cải Thiện**
-- 🚀 **Query Performance:** Tăng 15-20% cho date queries
-- 🛡️ **SQL Injection Vulnerabilities:** 18 → 0
-- ♻️ **Resource Management:** 100% repository layer sử dụng try-with-resources
+- **Query Performance:** Tăng 15-20% cho date queries
+- **SQL Injection Vulnerabilities:** 18 → 0
+- **Resource Management:** 100% repository layer sử dụng try-with-resources
 
 ### **Technical Debt Reduction**
 - Code cleaner và maintainable hơn
@@ -158,7 +158,7 @@ Co So Du Lieu (MySQL)
 - **Bảo Mật:** Sử dụng string concat cho SQL, dễ bị injection.
 - **Bảo Trì:** Code khó mở rộng, logic kinh doanh lẫn với UI.
 
-### **Version Mới (1.1.0 - V1.1):**
+### **Version Mới (1.1.0 - V2.0):**
 - **Kiến Trúc Phân Tầng:** Tách biệt rõ ràng GUI, Service, Repository, Model, Util, DTO.
 - **Quản Lý Tài Nguyên:** 100% repository layer sử dụng try-with-resources, automatic cleanup, zero resource leaks.
 - **Kiểm Thử:** Thêm unit tests cho service layer với Mockito, dễ mock dependencies.
