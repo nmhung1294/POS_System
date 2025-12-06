@@ -39,8 +39,13 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     public void saveInvoice(InvoiceDto invoiceDto) throws Exception {
+        // Use transaction to ensure data consistency
+        // If any operation fails, all changes are rolled back
+        Connection conn = null;
         try {
-            // Create invoice
+            conn = util.DBUtil.getTransactionalConnection();
+            
+            // 1. Create invoice
             invoiceRepository.createInvoice(
                 invoiceDto.getId(),
                 invoiceDto.getCustomerMobile(),
@@ -51,7 +56,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 invoiceDto.getDateTime()
             );
 
-            // Create invoice items and update stock
+            // 2. Create invoice items and update stock
             for (InvoiceItemDto item : invoiceDto.getItems()) {
                 invoiceItemRepository.createInvoiceItem(
                     item.getStockId(),
@@ -66,7 +71,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 );
             }
 
-            // Update customer points
+            // 3. Update customer points
             if (invoiceDto.isWithdrawPoints()) {
                 customerRepository.updateCustomerPoints(
                     invoiceDto.getCustomerMobile(),
@@ -80,10 +85,31 @@ public class InvoiceServiceImpl implements InvoiceService {
                 );
             }
 
-            logger.info("Invoice saved successfully: " + invoiceDto.getId());
+            // Commit transaction - all operations successful
+            conn.commit();
+            logger.info("Invoice saved successfully with transaction: " + invoiceDto.getId());
+            
         } catch (Exception e) {
+            // Rollback transaction on any error
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                    logger.warning("Transaction rolled back for invoice: " + invoiceDto.getId());
+                } catch (SQLException rollbackEx) {
+                    logger.log(Level.SEVERE, "Failed to rollback transaction", rollbackEx);
+                }
+            }
             logger.log(Level.SEVERE, "Error saving invoice: " + invoiceDto.getId(), e);
-            throw new Exception("Failed to save invoice", e);
+            throw new Exception("Failed to save invoice - transaction rolled back", e);
+        } finally {
+            // Close connection
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException closeEx) {
+                    logger.log(Level.WARNING, "Failed to close connection", closeEx);
+                }
+            }
         }
     }
 

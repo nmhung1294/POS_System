@@ -54,13 +54,15 @@ public class DBUtil {
             config.setUsername(properties.getProperty("db.user"));
             config.setPassword(properties.getProperty("db.password"));
 
-            // Cấu hình HikariCP
-            config.setMaximumPoolSize(10);
-            config.setMinimumIdle(2);
-            config.setIdleTimeout(30000);
-            config.setMaxLifetime(1800000);
-            config.setConnectionTimeout(10000);
-            config.setLeakDetectionThreshold(60000);
+            // Cấu hình HikariCP - Optimized for corporate scale
+            config.setMaximumPoolSize(50);  // Increased from 10 to support 35+ concurrent users
+            config.setMinimumIdle(10);      // Increased from 2 for better responsiveness
+            config.setIdleTimeout(600000);  // 10 minutes (increased from 30s)
+            config.setMaxLifetime(1800000); // 30 minutes
+            config.setConnectionTimeout(5000); // 5s (decreased from 10s for faster failure)
+            config.setLeakDetectionThreshold(60000); // 60s leak detection
+            config.setConnectionTestQuery("SELECT 1"); // Validate connections
+            config.setValidationTimeout(3000); // 3s validation timeout
 
             dataSource = new HikariDataSource(config);
             logger.info("✅ HikariCP Connection Pool initialized successfully");
@@ -76,7 +78,24 @@ public class DBUtil {
         if (dataSource == null) {
             throw new SQLException("DataSource is not initialized");
         }
-        return dataSource.getConnection();
+        Connection conn = dataSource.getConnection();
+        // Enable auto-commit by default (can be overridden for transactions)
+        conn.setAutoCommit(true);
+        return conn;
+    }
+    
+    /**
+     * Get connection with transaction support (auto-commit disabled).
+     * Use this for operations requiring rollback capability.
+     * Remember to commit() or rollback() and close the connection.
+     */
+    public static Connection getTransactionalConnection() throws SQLException {
+        if (dataSource == null) {
+            throw new SQLException("DataSource is not initialized");
+        }
+        Connection conn = dataSource.getConnection();
+        conn.setAutoCommit(false); // Enable transaction mode
+        return conn;
     }
 
     public static void closeQuietly(AutoCloseable... resources) {
