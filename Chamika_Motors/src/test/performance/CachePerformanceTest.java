@@ -76,40 +76,62 @@ class CachePerformanceTest extends PerformanceTestBase {
     
     @Test
     @Order(3)
-    @DisplayName("Cache Performance: Compare Miss vs Hit")
+    @DisplayName("Cache Performance: Compare Miss vs Hit (Nanosecond Precision)")
     void testCacheMissVsHitComparison() throws Exception {
         // Clear cache for fair comparison
         CacheManager.getInstance().clearAll();
         
-        // Measure cache miss
-        long missStart = System.currentTimeMillis();
-        Map<String, String> methods1 = paymentMethodRepository.findAllPaymentMethods();
-        long missEnd = System.currentTimeMillis();
-        long missTime = missEnd - missStart;
+        // Warm-up phase to ensure stable results
+        for (int i = 0; i < 5; i++) {
+            CacheManager.getInstance().clearAll();
+            paymentMethodRepository.findAllPaymentMethods();
+        }
         
-        // Measure cache hit
-        long hitStart = System.currentTimeMillis();
-        Map<String, String> methods2 = paymentMethodRepository.findAllPaymentMethods();
-        long hitEnd = System.currentTimeMillis();
-        long hitTime = hitEnd - hitStart;
+        // Measure cache miss with nanosecond precision
+        CacheManager.getInstance().clearAll();
+        long missStartNano = System.nanoTime();
+        Map<String, String> methods1 = paymentMethodRepository.findAllPaymentMethods();
+        long missEndNano = System.nanoTime();
+        long missTimeNano = missEndNano - missStartNano;
+        long missTimeMs = missTimeNano / 1_000_000;
+        
+        // Measure cache hit with nanosecond precision
+        // Multiple iterations for more accurate average
+        int iterations = 100;
+        long totalHitTimeNano = 0;
+        for (int i = 0; i < iterations; i++) {
+            long hitStartNano = System.nanoTime();
+            Map<String, String> methods2 = paymentMethodRepository.findAllPaymentMethods();
+            long hitEndNano = System.nanoTime();
+            totalHitTimeNano += (hitEndNano - hitStartNano);
+            assertNotNull(methods2);
+        }
+        long avgHitTimeNano = totalHitTimeNano / iterations;
+        long avgHitTimeMs = avgHitTimeNano / 1_000_000;
         
         assertNotNull(methods1);
-        assertNotNull(methods2);
-        assertEquals(methods1.size(), methods2.size());
+        assertEquals(methods1.size(), paymentMethodRepository.findAllPaymentMethods().size());
         
-        double improvement = (double) missTime / (hitTime > 0 ? hitTime : 1);
+        double improvement = (double) missTimeNano / (avgHitTimeNano > 0 ? avgHitTimeNano : 1);
         
         logger.info("=".repeat(80));
-        logger.info("CACHE PERFORMANCE COMPARISON");
+        logger.info("CACHE PERFORMANCE COMPARISON (NANOSECOND PRECISION)");
         logger.info("=".repeat(80));
-        logger.info(String.format("Cache MISS: %d ms", missTime));
-        logger.info(String.format("Cache HIT:  %d ms", hitTime));
+        logger.info(String.format("Cache MISS: %,d ns (%.2f ms)", missTimeNano, missTimeMs / 1.0));
+        logger.info(String.format("Cache HIT:  %,d ns (%.4f ms) - avg of %d iterations", 
+            avgHitTimeNano, avgHitTimeMs / 1.0, iterations));
         logger.info(String.format("Improvement: %.1fx faster", improvement));
+        logger.info(String.format("Time saved per hit: %,d ns (%.4f ms)", 
+            missTimeNano - avgHitTimeNano, (missTimeNano - avgHitTimeNano) / 1_000_000.0));
         logger.info("=".repeat(80));
         
-        // Cache hit should be significantly faster
-        assertTrue(improvement > 5, 
-            String.format("Cache hit should be at least 5x faster, actual: %.1fx", improvement));
+        // Cache hit should be significantly faster (at least 10x with nanosecond precision)
+        assertTrue(improvement >= 10.0, 
+            String.format("Cache hit should be at least 10x faster, actual: %.1fx", improvement));
+        
+        // Cache hit should be extremely fast (< 100 microseconds)
+        assertTrue(avgHitTimeNano < 100_000, 
+            String.format("Cache hit should be < 100 microseconds, actual: %,d ns", avgHitTimeNano));
     }
     
     @Test

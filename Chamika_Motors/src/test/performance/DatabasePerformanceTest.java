@@ -27,7 +27,7 @@ class DatabasePerformanceTest extends PerformanceTestBase {
     @DisplayName("Verify Database Connection")
     void testDatabaseConnection() throws Exception {
         verifyDatabaseConnection();
-        logger.info("✅ Database connection test passed");
+        logger.info(" Database connection test passed");
     }
     
     @Test
@@ -44,7 +44,7 @@ class DatabasePerformanceTest extends PerformanceTestBase {
         assertTrue(checkIndexExists("customer", "idx_customer_name"), 
             "Index idx_customer_name should exist on customer table");
         
-        logger.info("✅ All critical indices verified");
+        logger.info(" All critical indices verified");
     }
     
     @Test

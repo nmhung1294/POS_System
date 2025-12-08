@@ -65,23 +65,23 @@ public class PerformanceTestRunner {
         System.out.println("=".repeat(100));
         System.out.println(String.format("Tests found:    %d", summary.getTestsFoundCount()));
         System.out.println(String.format("Tests started:  %d", summary.getTestsStartedCount()));
-        System.out.println(String.format("Tests succeeded: %d ✅", summary.getTestsSucceededCount()));
-        System.out.println(String.format("Tests failed:    %d ❌", summary.getTestsFailedCount()));
-        System.out.println(String.format("Tests skipped:   %d ⊝", summary.getTestsSkippedCount()));
+        System.out.println(String.format("Tests succeeded: %d ", summary.getTestsSucceededCount()));
+        System.out.println(String.format("Tests failed:    %d X", summary.getTestsFailedCount()));
+        System.out.println(String.format("Tests skipped:   %d O", summary.getTestsSkippedCount()));
         System.out.println(String.format("Total time:      %d ms", summary.getTimeFinished() - summary.getTimeStarted()));
         System.out.println("=".repeat(100));
         
         if (summary.getTotalFailureCount() > 0) {
             System.out.println("\nFAILURES:");
             summary.getFailures().forEach(failure -> {
-                System.out.println("  ❌ " + failure.getTestIdentifier().getDisplayName());
+                System.out.println("  X " + failure.getTestIdentifier().getDisplayName());
                 System.out.println("     " + failure.getException().getMessage());
             });
             System.out.println("=".repeat(100));
         }
         
         if (summary.getTestsSucceededCount() == summary.getTestsFoundCount()) {
-            System.out.println("\n✅ ALL TESTS PASSED!");
+            System.out.println("\n ALL TESTS PASSED!");
             System.out.println("=".repeat(100));
         }
     }
@@ -101,9 +101,9 @@ public class PerformanceTestRunner {
             writer.println("|--------|-------|");
             writer.println("| Tests Found | " + summary.getTestsFoundCount() + " |");
             writer.println("| Tests Started | " + summary.getTestsStartedCount() + " |");
-            writer.println("| Tests Succeeded | " + summary.getTestsSucceededCount() + " ✅ |");
-            writer.println("| Tests Failed | " + summary.getTestsFailedCount() + " ❌ |");
-            writer.println("| Tests Skipped | " + summary.getTestsSkippedCount() + " ⊝ |");
+            writer.println("| Tests Succeeded | " + summary.getTestsSucceededCount() + "  |");
+            writer.println("| Tests Failed | " + summary.getTestsFailedCount() + " X |");
+            writer.println("| Tests Skipped | " + summary.getTestsSkippedCount() + " O |");
             writer.println("| Total Time | " + (summary.getTimeFinished() - summary.getTimeStarted()) + " ms |");
             writer.println();
             
@@ -123,7 +123,7 @@ public class PerformanceTestRunner {
             writer.println("## Conclusion");
             writer.println();
             if (summary.getTestsSucceededCount() == summary.getTestsFoundCount()) {
-                writer.println("✅ **ALL TESTS PASSED!**");
+                writer.println(" **ALL TESTS PASSED!**");
                 writer.println();
                 writer.println("The system has successfully demonstrated:");
                 writer.println("- Database queries optimized with indices");
@@ -131,7 +131,7 @@ public class PerformanceTestRunner {
                 writer.println("- Transaction support with rollback capability");
                 writer.println("- Connection pool handling concurrent access");
             } else {
-                writer.println("❌ **SOME TESTS FAILED**");
+                writer.println("X **SOME TESTS FAILED**");
                 writer.println();
                 writer.println("Please review the failures above and address the issues.");
             }

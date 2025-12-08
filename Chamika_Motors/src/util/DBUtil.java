@@ -65,7 +65,7 @@ public class DBUtil {
             config.setValidationTimeout(3000); // 3s validation timeout
 
             dataSource = new HikariDataSource(config);
-            logger.info("✅ HikariCP Connection Pool initialized successfully");
+            logger.info(" HikariCP Connection Pool initialized successfully");
 
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Failed to load configuration", e);

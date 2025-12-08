@@ -161,7 +161,7 @@ class TransactionPerformanceTest extends PerformanceTestBase {
                 }
             }
             
-            logger.info("✅ Transaction rollback data consistency verified");
+            logger.info(" Transaction rollback data consistency verified");
             
         } finally {
             if (conn != null) {

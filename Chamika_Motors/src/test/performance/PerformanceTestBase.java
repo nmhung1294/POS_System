@@ -73,9 +73,9 @@ public abstract class PerformanceTestBase {
             for (int i = 0; i < iterations; i++) {
                 task.run();
             }
-            metrics.status = "✅ PASS";
+            metrics.status = " PASS";
         } catch (Exception e) {
-            metrics.status = "❌ FAIL: " + e.getMessage();
+            metrics.status = "X FAIL: " + e.getMessage();
             logger.severe("Test failed: " + testName + " - " + e.getMessage());
         }
         
@@ -94,7 +94,7 @@ public abstract class PerformanceTestBase {
             if (conn == null || conn.isClosed()) {
                 throw new SQLException("Database connection is not available");
             }
-            logger.info("✅ Database connection verified");
+            logger.info(" Database connection verified");
         }
     }
     

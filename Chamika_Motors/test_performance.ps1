@@ -5,7 +5,7 @@
 
 Write-Host ""
 Write-Host "========================================"
-Write-Host "POS System Performance Tests"
+Write-Host "POS System Performance Tests - MariaDB"
 Write-Host "========================================"
 Write-Host ""
 
@@ -28,8 +28,27 @@ Write-Host "========================================"
 # Get all test files
 $testFiles = Get-ChildItem -Path (Join-Path $TEST_DIR "performance") -Filter "*.java" -Recurse
 
+# Build classpath with all required JARs
+$junitJars = @(
+    "junit-jupiter-api-5.10.1.jar",
+    "junit-jupiter-engine-5.10.1.jar",
+    "junit-platform-commons-1.10.1.jar",
+    "junit-platform-engine-1.10.1.jar",
+    "junit-platform-launcher-1.10.1.jar",
+    "opentest4j-1.3.0.jar",
+    "mysql-connector-java-8.0.24.jar",
+    "HikariCP-5.1.0.jar",
+    "slf4j-api-2.0.9.jar",
+    "slf4j-simple-2.0.9.jar"
+)
+
+$classpathParts = @($BUILD_DIR)
+foreach ($jar in $junitJars) {
+    $classpathParts += Join-Path $LIB_DIR $jar
+}
+$classpath = $classpathParts -join ";"
+
 # Compile test classes
-$classpath = "$BUILD_DIR;$LIB_DIR\*"
 javac -cp $classpath -d $BUILD_DIR $testFiles.FullName
 
 if ($LASTEXITCODE -ne 0) {
