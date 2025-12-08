@@ -1,3 +1,4 @@
+Nhánh main này là repo gốc, phiên bản cải tiến của nhóm nằm ở các nhánh ạ.
 # 🛠️ Chamika Motors - Point of Sale (POS) System
 
 **Chamika Motors** is a standalone Java-based Point of Sale (POS) system designed to streamline the daily operations of a motor service and sales business. This comprehensive system integrates inventory management, employee tracking, financial management, and more, with a user-friendly GUI.
